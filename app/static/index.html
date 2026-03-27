@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CountryLens</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #94a3b8;
+            margin-bottom: 40px;
+            font-size: 1.1rem;
+        }
+        .container {
+            width: 100%;
+            max-width: 640px;
+        }
+        .input-group {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        input {
+            flex: 1;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            background: #1e293b;
+            color: #e2e8f0;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input:focus { border-color: #38bdf8; }
+        input::placeholder { color: #64748b; }
+        button {
+            padding: 14px 28px;
+            border-radius: 12px;
+            border: none;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        button:hover { opacity: 0.9; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .examples {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+        .example-chip {
+            padding: 8px 14px;
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .example-chip:hover {
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+        .result-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 24px;
+            display: none;
+        }
+        .result-card.visible { display: block; }
+        .answer {
+            font-size: 1.1rem;
+            line-height: 1.7;
+            margin-bottom: 20px;
+        }
+        .meta {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .meta-tag {
+            padding: 6px 12px;
+            background: #0f172a;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+        .meta-tag span { color: #38bdf8; }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #64748b;
+            display: none;
+        }
+        .loading.visible { display: block; }
+        .error {
+            color: #f87171;
+            background: #1e293b;
+            border: 1px solid #7f1d1d;
+            border-radius: 16px;
+            padding: 24px;
+            display: none;
+        }
+        .error.visible { display: block; }
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #334155;
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <h1>CountryLens</h1>
+    <p class="subtitle">Ask anything about any country</p>
+
+    <div class="container">
+        <div class="input-group">
+            <input type="text" id="question" placeholder="e.g. What is the population of Germany?" />
+            <button id="askBtn" onclick="askQuestion()">Ask</button>
+        </div>
+
+        <div class="examples" id="examples">
+            <div class="example-chip" onclick="fillExample(this)">What is the capital of France?</div>
+            <div class="example-chip" onclick="fillExample(this)">What currency does Japan use?</div>
+            <div class="example-chip" onclick="fillExample(this)">Tell me about Brazil</div>
+            <div class="example-chip" onclick="fillExample(this)">What languages are spoken in India?</div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            Thinking...
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="result-card" id="result">
+            <div class="answer" id="answer"></div>
+            <div class="meta" id="meta"></div>
+        </div>
+    </div>
+
+    <script>
+        const input = document.getElementById('question');
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') askQuestion();
+        });
+
+        function fillExample(el) {
+            input.value = el.textContent;
+            askQuestion();
+        }
+
+        async function askQuestion() {
+            const question = input.value.trim();
+            if (!question) return;
+
+            const btn = document.getElementById('askBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            const error = document.getElementById('error');
+
+            btn.disabled = true;
+            loading.classList.add('visible');
+            result.classList.remove('visible');
+            error.classList.remove('visible');
+            document.getElementById('examples').style.display = 'none';
+
+            try {
+                const resp = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await resp.json();
+
+                document.getElementById('answer').textContent = data.answer;
+
+                const meta = document.getElementById('meta');
+                meta.innerHTML = '';
+
+                if (data.metadata) {
+                    if (data.metadata.country_queried) {
+                        meta.innerHTML += `<div class="meta-tag">Country: <span>${data.metadata.country_queried}</span></div>`;
+                    }
+                    meta.innerHTML += `<div class="meta-tag">Time: <span>${data.metadata.response_time_ms}ms</span></div>`;
+                    meta.innerHTML += `<div class="meta-tag">Cached: <span>${data.metadata.cached ? 'Yes' : 'No'}</span></div>`;
+                    meta.innerHTML += `<div class="meta-tag">Model: <span>${data.metadata.model}</span></div>`;
+                }
+
+                result.classList.add('visible');
+            } catch (err) {
+                error.textContent = 'Something went wrong. Please try again.';
+                error.classList.add('visible');
+            } finally {
+                btn.disabled = false;
+                loading.classList.remove('visible');
+            }
+        }
+    </script>
+</body>
+</html>

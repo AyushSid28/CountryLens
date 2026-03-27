@@ -1,154 +1,104 @@
 # CountryLens
 
-An AI agent that answers questions about countries using real-time public data. Built with LangGraph and FastAPI.
+AI agent that answers questions about countries. Ask stuff like "What's the capital of France?" or "Tell me about Japan" and it fetches real data from the REST Countries API and responds in natural language.
 
-Ask it anything like *"What is the population of Germany?"* or *"What currency does Japan use?"* and it pulls live data from the REST Countries API, then gives you a clean, grounded answer.
+Built with LangGraph, FastAPI, and Groq.
 
 ## Live Demo
 
-> **Hosted URL:** [coming soon after deployment]
+> **URL:** [coming soon]
 
-## Architecture
+## How it works
 
-The agent follows a 3-step pipeline built as a LangGraph state machine. Each step has a single responsibility — no monolithic prompt chains.
+Three-step LangGraph pipeline:
 
 ```mermaid
 graph TD
     A[User Query] --> B[Intent Parser]
-    B -->|valid country| C[API Tool]
-    B -->|invalid input| D[Answer Synthesizer]
-    C -->|data fetched| D
-    C -->|API error| D
+    B -->|valid| C[API Tool]
+    B -->|invalid| D[Synthesizer]
+    C --> D
     D --> E[Response]
-
-    style B fill:#4a90d9,color:#fff
-    style C fill:#50c878,color:#fff
-    style D fill:#f5a623,color:#fff
 ```
 
-| Node | What it does | Uses LLM? |
-|------|-------------|-----------|
-| **Intent Parser** | Extracts country name and user intent from natural language | Yes (structured JSON output) |
-| **API Tool** | Calls REST Countries API with retry + cache | No |
-| **Answer Synthesizer** | Formats a natural language response grounded in API data | Yes |
+1. **Intent Parser** — LLM extracts country name and what the user is asking for (structured JSON output)
+2. **API Tool** — hits REST Countries API, handles retries and caching (no LLM here, pure code)
+3. **Synthesizer** — LLM takes the raw API data and writes a clean answer, only using the fetched data
 
-## Design Decisions
+If the intent parser can't find a country or the API fails, it skips straight to the synthesizer with an error message instead of crashing.
 
-| Decision | Choice | Why |
-|----------|--------|-----|
-| LLM for intent parsing | Groq (Llama 3.3 70B) | Fast inference, handles typos and varied phrasing naturally |
-| Validation | Conditional edge in LangGraph | Skips API call entirely on bad input — saves time and API quota |
-| HTTP client | httpx (async) | Non-blocking, plays well with FastAPI's async stack |
-| Retry logic | Exponential backoff (max 3) | Handles transient API failures without hammering the endpoint |
-| Caching | In-memory TTL cache (cachetools) | Avoids redundant API calls for repeated queries, no DB needed |
-| Error handling | Graceful at every node | User always gets a useful message, never a raw traceback |
+## Why I made these choices
 
-## Tech Stack
+- **Groq (Llama 3.3 70B)** for LLM — fast inference, free tier works
+- **httpx async** — non-blocking, fits FastAPI's async model
+- **Exponential backoff on retries** — don't hammer the API when it's struggling
+- **TTL cache (cachetools)** — same country asked twice? second response is instant from cache
+- **Conditional edges in LangGraph** — bad input skips the API call entirely
 
-- **Agent Framework:** LangGraph
-- **LLM:** Groq (Llama 3.3 70B Versatile)
-- **API Framework:** FastAPI + Uvicorn
-- **HTTP Client:** httpx (async)
-- **Caching:** cachetools (TTL-based)
-- **Validation:** Pydantic v2
-- **Deployment:** Docker + Render
-
-## Project Structure
-
-```
-CountryLens/
-├── app/
-│   ├── main.py              # FastAPI app, endpoints, CORS, logging
-│   ├── config.py             # Environment settings (Pydantic BaseSettings)
-│   ├── agent/
-│   │   ├── graph.py          # LangGraph workflow definition
-│   │   ├── nodes.py          # Intent parser, fetch, synthesizer
-│   │   ├── state.py          # TypedDict state schema
-│   │   └── tools.py          # REST Countries API client + cache + retry
-│   └── models/
-│       └── schemas.py        # Request/response Pydantic models
-├── tests/
-│   └── test_agent.py
-├── Dockerfile
-├── requirements.txt
-├── .env.example
-└── README.md
-```
-
-## Run Locally
+## Setup
 
 ```bash
 git clone https://github.com/AyushSid28/CountryLens.git
 cd CountryLens
-
 python -m venv venv
 source venv/bin/activate
-
 pip install -r requirements.txt
-
-cp .env.example .env
-# Add your GROQ_API_KEY to .env
-
+cp .env.example .env   # add your GROQ_API_KEY
 uvicorn app.main:app --reload --port 8000
 ```
 
-API docs available at `http://localhost:8000/docs`
+Open `http://localhost:8000` for the UI or `http://localhost:8000/docs` for Swagger.
 
-## Run with Docker
+### Docker
 
 ```bash
 docker build -t countrylens .
 docker run -p 8000:8000 --env-file .env countrylens
 ```
 
-## API Endpoints
+## API
 
-### POST /query
-
+**POST /query**
 ```json
+// request
+{ "question": "What is the capital and population of Brazil?" }
+
+// response
 {
-  "question": "What is the capital and population of Brazil?"
+  "answer": "The capital of Brazil is Brasília with a population of about 212.5 million.",
+  "data": { "name": "Brazil", "capital": ["Brasília"], "population": 212559417 },
+  "metadata": { "country_queried": "Brazil", "response_time_ms": 1243.5, "cached": false }
 }
 ```
 
-**Response:**
+**GET /health** — returns `{"status": "healthy"}`
 
-```json
-{
-  "answer": "The capital of Brazil is Brasília and its population is approximately 212.6 million.",
-  "data": {
-    "name": "Brazil",
-    "capital": ["Brasília"],
-    "population": 212559417,
-    "region": "Americas"
-  },
-  "metadata": {
-    "country_queried": "Brazil",
-    "response_time_ms": 1243.5,
-    "cached": false,
-    "model": "llama-3.3-70b-versatile"
-  }
-}
+## Project structure
+
+```
+app/
+├── main.py           # FastAPI endpoints
+├── config.py         # env settings
+├── agent/
+│   ├── graph.py      # LangGraph workflow
+│   ├── nodes.py      # intent parser, fetch, synthesizer
+│   ├── state.py      # state schema
+│   └── tools.py      # API client + cache + retry
+└── models/
+    └── schemas.py    # pydantic models
 ```
 
-### GET /health
+## Known limitations
 
-Returns `{"status": "healthy", "version": "1.0.0"}`
+- Only handles one country per query
+- LLM calls add ~1-2s latency per request
+- Cache is in-memory so it resets on restart
+- Accuracy depends on REST Countries API data
 
-## Known Limitations
+## What I'd add for production
 
-- **Single country per query** — asking about multiple countries in one question may only return data for the first one detected
-- **LLM dependency** — intent parsing and answer synthesis require an LLM call, adding latency (~1-2s per query)
-- **In-memory cache** — cache resets on server restart since there's no persistent storage
-- **REST Countries API** — the agent is only as accurate as the upstream data source
-
-## Production Considerations
-
-If this were a real production service, I'd add:
-
-- **Redis** for distributed caching across multiple instances
-- **Rate limiting** on the `/query` endpoint to prevent abuse
-- **Structured JSON logging** for observability (e.g., with structlog)
-- **OpenTelemetry tracing** across LangGraph nodes for debugging agent flows
-- **Input sanitization** and prompt injection guards
-- **Health check** that verifies LLM and API connectivity, not just uptime
+- Redis for distributed cache
+- Rate limiting on /query
+- OpenTelemetry tracing across nodes
+- Prompt injection guards
+- Health check that actually pings the LLM and API

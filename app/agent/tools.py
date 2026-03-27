@@ -68,34 +68,38 @@ async def _call_with_retry(country_name:str)->dict[str,Any]:
 
     
 async def _call_api(country_name: str) -> dict[str, Any]:
-  settings = get_settings()
-  url = f"{settings.rest_countries_base_url}/name/{country_name}"
-  async with httpx.AsyncClient(timeout=10.0) as client:
-      resp = await client.get(url, params={"fullText": "false"})
-  if resp.status_code == 404:
-      raise CountryNotFoundError(f"Country not found: {country_name}")
-  if resp.status_code != 200:
-      raise CountryAPIError(
-          f"REST Countries API returned {resp.status_code}: {resp.text[:200]}"
-      )
-  results = resp.json()
-  if not results:
-      raise CountryNotFoundError(f"No results for: {country_name}")
-  raw = results[0]
-  return {
-      "name": raw.get("name", {}).get("common", "Unknown"),
-      "official_name": raw.get("name", {}).get("official", "Unknown"),
-      "capital": raw.get("capital", ["Unknown"]),
-      "population": raw.get("population", 0),
-      "area_km2": raw.get("area", 0),
-      "region": raw.get("region", "Unknown"),
-      "subregion": raw.get("subregion", "Unknown"),
-      "languages": raw.get("languages", {}),
-      "currencies": raw.get("currencies", {}),
-      "timezones": raw.get("timezones", []),
-      "borders": raw.get("borders", []),
-      "flag_emoji": raw.get("flag", ""),
-      "maps": raw.get("maps", {}),
-  }
+    settings = get_settings()
+    url = f"{settings.rest_countries_base_url}/name/{country_name}"
+
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        resp = await client.get(url, params={"fullText": "false"})
+
+    if resp.status_code == 404:
+        raise CountryNotFoundError(f"Country not found: {country_name}")
+    if resp.status_code != 200:
+        raise CountryAPIError(
+            f"REST Countries API returned {resp.status_code}: {resp.text[:200]}"
+        )
+
+    results = resp.json()
+    if not results:
+        raise CountryNotFoundError(f"No results for: {country_name}")
+
+    raw = results[0]
+    return {
+        "name": raw.get("name", {}).get("common", "Unknown"),
+        "official_name": raw.get("name", {}).get("official", "Unknown"),
+        "capital": raw.get("capital", ["Unknown"]),
+        "population": raw.get("population", 0),
+        "area_km2": raw.get("area", 0),
+        "region": raw.get("region", "Unknown"),
+        "subregion": raw.get("subregion", "Unknown"),
+        "languages": raw.get("languages", {}),
+        "currencies": raw.get("currencies", {}),
+        "timezones": raw.get("timezones", []),
+        "borders": raw.get("borders", []),
+        "flag_emoji": raw.get("flag", ""),
+        "maps": raw.get("maps", {}),
+    }
 
 
