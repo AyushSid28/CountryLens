@@ -77,9 +77,9 @@ async def synthesize_answer(state: AgentState) -> dict[str, Any]:
     prompt = (
         "Answer the user's question using ONLY the country data below.\n"
         "Rules:\n"
-        "- Be concise and direct. Only mention fields relevant to the question.\n"
-        "- Do not add links, references, or suggestions to visit external websites.\n"
-        "- Do not make up any facts beyond what is in the data.\n\n"
+        " Be concise and direct. Only mention fields relevant to the question.\n"
+        " Do not add links, references, or suggestions to visit external websites.\n"
+        " Do not make up any facts beyond what is in the data.\n\n"
         f"Question: {state['question']}\n"
         f"Country data: {json.dumps(data, indent=2)}"
     )
