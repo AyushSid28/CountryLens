@@ -73,11 +73,15 @@ async def synthesize_answer(state: AgentState) -> dict[str, Any]:
         return {"answer": state["error"]}
 
     llm = _get_llm()
+    data = {k: v for k, v in state["country_data"].items() if k != "maps"}
     prompt = (
-        "Answer the user's question using the country data below.\n"
-        "Be concise, accurate, and helpful. Use the data provided — do not make up facts.\n\n"
+        "Answer the user's question using ONLY the country data below.\n"
+        "Rules:\n"
+        "- Be concise and direct. Only mention fields relevant to the question.\n"
+        "- Do not add links, references, or suggestions to visit external websites.\n"
+        "- Do not make up any facts beyond what is in the data.\n\n"
         f"Question: {state['question']}\n"
-        f"Country data: {json.dumps(state['country_data'], indent=2)}"
+        f"Country data: {json.dumps(data, indent=2)}"
     )
 
     response = await llm.ainvoke(prompt)

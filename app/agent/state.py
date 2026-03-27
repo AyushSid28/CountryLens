@@ -1,15 +1,14 @@
-from typing import Any,TypedDict
+from typing import Any, TypedDict
 
 
-
-class AgentState(TypedDict):
-    question:str
-    country:str
-    intent:str
-    country_data:dict[str,Any]
-    answer:str
-    error:str | None=None
-    cached:bool
+class AgentState(TypedDict, total=False):
+    question: str
+    country: str
+    intent: str
+    country_data: dict[str, Any]
+    answer: str
+    error: str | None
+    cached: bool
 
 
 

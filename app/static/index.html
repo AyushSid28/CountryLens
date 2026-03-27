@@ -148,7 +148,7 @@
             <button id="askBtn" onclick="askQuestion()">Ask</button>
         </div>
 
-        <div class="examples">
+        <div class="examples" id="examples">
             <div class="example-chip" onclick="fillExample(this)">What is the capital of France?</div>
             <div class="example-chip" onclick="fillExample(this)">What currency does Japan use?</div>
             <div class="example-chip" onclick="fillExample(this)">Tell me about Brazil</div>
@@ -192,6 +192,7 @@
             loading.classList.add('visible');
             result.classList.remove('visible');
             error.classList.remove('visible');
+            document.getElementById('examples').style.display = 'none';
 
             try {
                 const resp = await fetch('/query', {
