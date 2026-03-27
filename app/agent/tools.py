@@ -67,6 +67,20 @@ async def _call_with_retry(country_name:str)->dict[str,Any]:
     raise CountryAPIError(f"Exhausted {settings.api_retry_max_attempts} retries") from last_exc
 
     
+def _best_match(results: list[dict], query: str) -> dict:
+    query_lower = query.lower()
+    for r in results:
+        common = r.get("name", {}).get("common", "").lower()
+        official = r.get("name", {}).get("official", "").lower()
+        if common == query_lower or official == query_lower:
+            return r
+    for r in results:
+        common = r.get("name", {}).get("common", "").lower()
+        if common.startswith(query_lower):
+            return r
+    return results[0]
+
+
 async def _call_api(country_name: str) -> dict[str, Any]:
     settings = get_settings()
     url = f"{settings.rest_countries_base_url}/name/{country_name}"
@@ -85,7 +99,7 @@ async def _call_api(country_name: str) -> dict[str, Any]:
     if not results:
         raise CountryNotFoundError(f"No results for: {country_name}")
 
-    raw = results[0]
+    raw = _best_match(results, country_name)
     return {
         "name": raw.get("name", {}).get("common", "Unknown"),
         "official_name": raw.get("name", {}).get("official", "Unknown"),
