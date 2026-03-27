@@ -11,7 +11,7 @@ logger=logging.getLogger(__name__)
 class CountryAPIError(Exception):
     pass
 
-class CountryNotFoundError(CountAPIError):
+class CountryNotFoundError(CountryAPIError):
     pass
 
 def _build_cache()-> TTLCache:
@@ -55,7 +55,7 @@ async def _call_with_retry(country_name:str)->dict[str,Any]:
             last_exc=exc
             if attempt==settings.api_retry_max_attempts:
                 break
-            delay=settings.api_retry_base_dealy*(2**(attempt-1))
+            delay=settings.api_retry_base_delay*(2**(attempt-1))
             logger.warning(
                  "API attempt %d/%d failed: %s — retrying in %.1fs",
               attempt,

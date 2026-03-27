@@ -13,7 +13,8 @@ class QueryMetadata(BaseModel):
 
 class QueryResponse(BaseModel):
     answer:str
-    data:dict[str,Any]=Field(default_fctory=dict)
+    data:dict[str,Any]=Field(default_factory=dict)
+    metadata:QueryMetadata | None=None
 
 
 class HealthResponse(BaseModel):
