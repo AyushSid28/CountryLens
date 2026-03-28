@@ -3,7 +3,7 @@
 AI agent that answers questions about countries using real-time data from the REST Countries API. Built with LangGraph, FastAPI, and Groq.
 
 Live Demo: https://countrylens.onrender.com
-Video Walkthrough: https://www.loom.com/share/beead33d358742c88fe2fc9d24c02e6f
+Video Walkthrough: https://www.loom.com/share/e567a98fa4874b5d9aa1dafb7f1d6e8b
 
 ## How it works
 
