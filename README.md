@@ -57,22 +57,26 @@ GET /health — returns status and version
 
 ## Design choices
 
-- Conditional edge in LangGraph skips API call on invalid input
-- In-memory TTL cache (5 min) avoids repeated API calls for same country
-- Exponential backoff retry on API failures (1s, 2s, 4s...)
-- Best-match logic to pick correct country when API returns multiple results
-- Strict synthesis prompt to prevent hallucination
+If the intent parser can't find a valid country, the flow skips the API call entirely and goes straight to the synthesizer with an error. No wasted API calls.
+
+The API responses are cached in-memory for 5 minutes so if someone asks about the same country twice, the second response is instant.
+
+If the REST Countries API fails, the agent retries with exponential backoff (1s, 2s, 4s) instead of crashing. Gives the API time to recover.
 
 ## Limitations
 
-- One country per query
-- LLM adds ~1-2s latency per request
-- Cache resets on server restart
-- Accuracy depends on REST Countries API
+It only handles one country per query right now. Asking "compare India and China" will only pick up one.
+
+Every request makes two LLM calls (parsing + synthesis) which adds about 1-2 seconds of latency.
+
+The cache is in-memory so it resets every time the server restarts. No persistence across deployments.
 
 ## What I'd add for production
 
-- Redis for distributed cache
-- Rate limiting on /query
-- OpenTelemetry tracing across nodes
-- Prompt injection guards
+Right now the cache is in-memory so it resets on restart and doesn't work across multiple instances. I'd swap it with Redis.
+
+The /query endpoint has no rate limiting so anyone can spam it and burn through API credits. Adding a rate limiter would fix that.
+
+For debugging latency issues I'd add OpenTelemetry tracing across the LangGraph nodes so I can see exactly which step is slow.
+
+
