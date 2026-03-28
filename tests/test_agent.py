@@ -2,6 +2,15 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
+from app.agent.graph import build_graph
+import app.main as main_module
+
+
+@pytest.fixture(autouse=True)
+def setup_graph():
+    main_module._graph = build_graph()
+    yield
+    main_module._graph = None
 
 
 @pytest.fixture
